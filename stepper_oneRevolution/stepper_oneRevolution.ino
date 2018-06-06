@@ -39,14 +39,17 @@ void setup() {
 void loop() {
   if(Serial.available()){
     char message[3];
+    // Serial.println("Hello World");
     Serial.readBytes(message, 3);
     if(message[0] == 76){         // Left == Counter Clock Wise
       double revolutions = (message[1] - 48)*10 + (message[2] - 48);
+      Serial.println("Left");
       revolutions = revolutions/100;
       step_counter_clockwise(revolutions*STEPS_PER_REVOLUTION*1.6);  
     }
     if(message[0] == 82){         // Right == Clock Wise
       double revolutions = (message[1] - 48)*10 + (message[2] - 48);
+      Serial.println("Right");
       revolutions = revolutions/100;
       step_clockwise(revolutions*STEPS_PER_REVOLUTION*1.6);
     }

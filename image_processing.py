@@ -8,67 +8,86 @@ from matplotlib import pyplot as plt
 cap = cv2.VideoCapture(0)
 fourcc = cv2.VideoWriter_fourcc(*'DVIX')
 out = cv2.VideoWriter('output.avi',fourcc, 20.0, (640,480))
-ser = serial.Serial('COM8', 9600)
+ser = serial.Serial('COM4', 9600)
 time.sleep(2)
 
+STEPPER_MOTOR_STEPS = 20
 
-#turn_left(18)
-
-
-# def turn_right(dist_from_line):
-#     miss_dist = abs(dist_from_line - 24.0)
-#     miss_deg = math.degrees(math.atan(miss_dist / 120.0))
-#     correction_steps = (miss_deg / 20.0)
-#     correction_steps = float('%.2f'%(correction_steps))
-#     correction_steps *= 100
-#     correction_steps = '%.0f' % (correction_steps)
-#     ser.write(b"R" + str(correction_steps))
-
-MAGNITUDE = 0
-DIRECTION = 1
-MAG_0 = 0
-MAG_1 = 1
-MAG_2 = 2
-MAG_3 = 3
-MAG_4 = 4
 LEFT = 0
 RIGHT = 1
-current_state = [MAG_0, CENTER]
-prev_state = current_state
 
-def state_machine(error, dir):
+HARD_LEFT =     0
+SOFT_LEFT =     1
+CENTER =        2
+SOFT_RIGHT =    3
+HARD_RIGHT =    4
+
+def state_control(error, dir, current_state, prev_state):
     if error < 2:
-        prev_state = current_state
-        current_state = [MAG_0, dir]
-    if error >= 2 and error < 6:
-        prev_state = current_state
-        current_state = [MAG_1, dir]
-    if error >= 6:
-        prev_state = current_state
-        current_state = [MAG_2, dir]
-
-    if current_state != prev_state:
-        turn_amount = abs(current_state[MAGNITUDE] - prev_state[MAGNITUDE])
-        turn_dir = abs(current_state[DIRECTION] - prev_state[DIRECTION])
+        current_state = CENTER
+    elif error < 6:
+        if dir == LEFT:
+            current_state = SOFT_LEFT
+        if dir == RIGHT:
+            current_state = SOFT_RIGHT
+    else:
+        if dir == LEFT:
+            current_state = HARD_LEFT
+        if dir == RIGHT:
+            current_state = HARD_RIGHT
+    if prev_state != current_state:
+        if prev_state == CENTER:
+            if current_state == SOFT_LEFT:
+                turn_wheel(1, LEFT)
+            if current_state == SOFT_RIGHT:
+                turn_wheel(1, RIGHT)
+            if current_state == HARD_LEFT:
+                turn_wheel(2, LEFT)
+            if current_state == HARD_RIGHT:
+                turn_wheel(2, RIGHT)
+        if prev_state == SOFT_LEFT:
+            if current_state == CENTER:
+                turn_wheel(1, RIGHT)
+            if current_state == HARD_LEFT:
+                turn_wheel(1, LEFT)
+        if prev_state == HARD_LEFT:
+            if current_state == CENTER:
+                turn_wheel(2, RIGHT)
+            if current_state == SOFT_LEFT:
+                turn_wheel(1, RIGHT)
+        if prev_state == SOFT_RIGHT:
+            if current_state == CENTER:
+                turn_wheel(1, LEFT)
+            if current_state == HARD_RIGHT:
+                turn_wheel(1, RIGHT)
+        if prev_state == HARD_RIGHT:
+            if current_state == CENTER:
+                turn_wheel(2, LEFT)
+            if current_state == SOFT_RIGHT:
+                turn_wheel(1, LEFT)
+    # print([current_state, prev_state])
+    prev_state = current_state
+    return [current_state, prev_state]
 
 
 def turn_wheel(steps, dir):
-    miss_dist = abs(dist_from_line - 22.0)
-    miss_deg = math.degrees(math.atan(miss_dist / 120.0))
-    correction_steps = (miss_deg / 20.0)
+    correction_steps = STEPPER_MOTOR_STEPS * steps
     correction_steps = float('%.2f'%(correction_steps))
-    correction_steps *= 100
     correction_steps = '%.0f' % (correction_steps)
     if dir == LEFT:
-        ser.write(b"L" + str(correction_steps))
+        print("L" + str(correction_steps))
+        ser.write(b"L" + str(correction_steps).encode())
     if dir == RIGHT:
-        ser.write(b"R" + str(correction_steps))
+        print("R" + str(correction_steps))
+        ser.write(b"R" + str(correction_steps).encode())
 
 
 
 CAR_WIDTH_CORRECTION = 3*12         # Half width of car in inches
 CORRECTION_FACTOR = 0.2897          # Constant to convert pixels to inches at 10 ft distance
 TARGET_DIST_PX = 140                # Target distance ahead of vehicle in pixels
+
+state = state_control(0, LEFT, CENTER, CENTER)
 
 while(True):
     ret, frame = cap.read()
@@ -128,13 +147,17 @@ while(True):
 
         if dist_from_line:
             if dist_from_line > 24:
-                print "GO RIGHT"
-                turn_right(dist_from_line)
+                print("GO RIGHT")
+                miss_dist = abs(dist_from_line - 22.0)
+                state = state_control(miss_dist, RIGHT, state[0], state[1])
             elif dist_from_line < 20:
-                print "GO LEFT"
-                turn_left(dist_from_line)
+                miss_dist = abs(dist_from_line - 22.0)
+                print("GO LEFT")
+                state = state_control(miss_dist, LEFT, state[0], state[1])
             else:
-                print "YOU GOOD BOYE"
+                miss_dist = abs(dist_from_line - 22.0)
+                print("YOU GOOD BOYE")
+                state_control(miss_dist, LEFT)      # Passing left because it is ignored for center
 
         cv2.imwrite('hough_lines.jpg',img)
         # print time.time() - start_time, "Seconds"
