@@ -9,6 +9,7 @@ ser = serial.Serial('COM4', 9600)
 time.sleep(2)
 
 STEPPER_MOTOR_STEPS = 45
+MOTOR_DELAY = 0.50
 
 LEFT = 0
 RIGHT = 1
@@ -71,6 +72,7 @@ def turn_wheel(steps, dir):
     correction_steps = STEPPER_MOTOR_STEPS * steps
     correction_steps = float('%.2f'%(correction_steps))
     correction_steps = '%.0f' % (correction_steps)
+    print(correction_steps)
     if dir == LEFT:
         print("L" + str(correction_steps))
         ser.write(b"L" + str(correction_steps).encode())
@@ -80,15 +82,21 @@ def turn_wheel(steps, dir):
 
 print("STARTING RUN")
 state = state_control(0, LEFT, CENTER, CENTER)
+time.sleep(MOTOR_DELAY)
 print("Completed 1")
 state = state_control(3, LEFT, state[0], state[1])
+time.sleep(MOTOR_DELAY)
 print("Completed 2")
-# state = state_control(3, LEFT, state[0], state[1])
-# print("Completed 3")
-# state = state_control(7, LEFT, state[0], state[1])
-# print("Completed 4")
-# state = state_control(0, LEFT, state[0], state[1])
-# print("Completed 5")
-# state = state_control(7, RIGHT, state[0], state[1])
-# print("Completed 6")
-# print("ENDING RUN")
+state = state_control(3, LEFT, state[0], state[1])
+time.sleep(MOTOR_DELAY)
+print("Completed 3")
+state = state_control(7, LEFT, state[0], state[1])
+time.sleep(MOTOR_DELAY)
+print("Completed 4")
+state = state_control(0, LEFT, state[0], state[1])
+time.sleep(MOTOR_DELAY)
+print("Completed 5")
+state = state_control(7, RIGHT, state[0], state[1])
+time.sleep(MOTOR_DELAY)
+print("Completed 6")
+print("ENDING RUN")

@@ -11,7 +11,8 @@ out = cv2.VideoWriter('output.avi',fourcc, 20.0, (640,480))
 ser = serial.Serial('COM4', 9600)
 time.sleep(2)
 
-STEPPER_MOTOR_STEPS = 20
+STEPPER_MOTOR_STEPS = 45
+MOTOR_DELAY = 0.50
 
 LEFT = 0
 RIGHT = 1

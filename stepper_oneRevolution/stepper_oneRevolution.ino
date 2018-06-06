@@ -19,7 +19,7 @@
 
 const int STEPS_PER_REVOLUTION = 1600;  // change this to fit the number of steps per revolution
                                         // for your motor
-const int STEPPER_SPEED = 60;          // Stepper motot RPM
+const int STEPPER_SPEED = 200;          // Stepper motot RPM
 
 // One revolution of string ~= 2&3/8 inches linear, which translates to ~20 degrees of wheel turn
 
@@ -43,14 +43,12 @@ void loop() {
     Serial.readBytes(message, 3);
     if(message[0] == 76){         // Left == Counter Clock Wise
       double revolutions = (message[1] - 48)*10 + (message[2] - 48);
-      Serial.println("Left");
-      revolutions = revolutions/100;
-      step_counter_clockwise(revolutions*STEPS_PER_REVOLUTION*1.6);  
+      revolutions = revolutions/50;
+      step_counter_clockwise(revolutions*STEPS_PER_REVOLUTION*1.6); 
     }
     if(message[0] == 82){         // Right == Clock Wise
       double revolutions = (message[1] - 48)*10 + (message[2] - 48);
-      Serial.println("Right");
-      revolutions = revolutions/100;
+      revolutions = revolutions/50;
       step_clockwise(revolutions*STEPS_PER_REVOLUTION*1.6);
     }
   }
