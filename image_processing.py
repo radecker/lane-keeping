@@ -3,15 +3,15 @@ import cv2
 import math
 import numpy as np
 import serial
-from matplotlib import pyplot as plt
+# from matplotlib import pyplot as plt
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 fourcc = cv2.VideoWriter_fourcc(*'DVIX')
 out = cv2.VideoWriter('output.avi',fourcc, 20.0, (640,480))
-ser = serial.Serial('COM4', 9600)
+ser = serial.Serial('/dev/ttyACM0', 9600)
 time.sleep(2)
 
-STEPPER_MOTOR_STEPS = 45
+STEPPER_MOTOR_STEPS = 20
 MOTOR_DELAY = 0.50
 
 LEFT = 0
@@ -76,20 +76,25 @@ def turn_wheel(steps, dir):
     correction_steps = float('%.2f'%(correction_steps))
     correction_steps = '%.0f' % (correction_steps)
     if dir == LEFT:
-        print("L" + str(correction_steps))
+        # print("L" + str(correction_steps))
         ser.write(b"L" + str(correction_steps).encode())
     if dir == RIGHT:
-        print("R" + str(correction_steps))
+        # print("R" + str(correction_steps))
         ser.write(b"R" + str(correction_steps).encode())
 
 
 
 CAR_WIDTH_CORRECTION = 3*12         # Half width of car in inches
-CORRECTION_FACTOR = 0.2897          # Constant to convert pixels to inches at 10 ft distance
+CORRECTION_FACTOR = 0.2522          # Constant to convert pixels to inches at 10 ft distance
 TARGET_DIST_PX = 140                # Target distance ahead of vehicle in pixels
-
+# going at 15 feet distance
+TARGET_DIST_SUB = 24.0
+BS_FACTOR = 1.6514
 state = state_control(0, LEFT, CENTER, CENTER)
 
+prev_dist = 0
+prev_dist_2 = 0
+count = 0
 while(True):
     ret, frame = cap.read()
     if ret == True:
@@ -146,19 +151,28 @@ while(True):
                 dist_from_line = i*CORRECTION_FACTOR - CAR_WIDTH_CORRECTION
                 break
 
+        dist_from_line = dist_from_line * BS_FACTOR
+        if count > 1:
+            dist_from_line = (dist_from_line + prev_dist + prev_dist_2)/3
+        prev_dist_2 = prev_dist
+        prev_dist = dist_from_line
+        if count < 10:
+            count = count + 1
+
         if dist_from_line:
-            if dist_from_line > 24:
+            # print(dist_from_line)
+            if dist_from_line > 25:
                 print("GO RIGHT")
-                miss_dist = abs(dist_from_line - 22.0)
+                miss_dist = abs(dist_from_line - TARGET_DIST_SUB)
                 state = state_control(miss_dist, RIGHT, state[0], state[1])
-            elif dist_from_line < 20:
-                miss_dist = abs(dist_from_line - 22.0)
+            elif dist_from_line < 19:
+                miss_dist = abs(dist_from_line - TARGET_DIST_SUB)
                 print("GO LEFT")
                 state = state_control(miss_dist, LEFT, state[0], state[1])
             else:
-                miss_dist = abs(dist_from_line - 22.0)
+                miss_dist = abs(dist_from_line - TARGET_DIST_SUB)
                 print("YOU GOOD BOYE")
-                state_control(miss_dist, LEFT)      # Passing left because it is ignored for center
+                state = state_control(miss_dist, LEFT, state[0], state[1])      # Passing left because it is ignored for center
 
         cv2.imwrite('hough_lines.jpg',img)
         # print time.time() - start_time, "Seconds"

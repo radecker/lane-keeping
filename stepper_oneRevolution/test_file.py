@@ -3,9 +3,9 @@ import cv2
 import math
 import numpy as np
 import serial
-from matplotlib import pyplot as plt
+# from matplotlib import pyplot as plt
 
-ser = serial.Serial('COM4', 9600)
+ser = serial.Serial('/dev/ttyACM0', 9600)
 time.sleep(2)
 
 STEPPER_MOTOR_STEPS = 45
@@ -63,7 +63,7 @@ def state_control(error, dir, current_state, prev_state):
                 turn_wheel(2, LEFT)
             if current_state == SOFT_RIGHT:
                 turn_wheel(1, LEFT)
-    print([current_state, prev_state])
+    # print([current_state, prev_state])
     prev_state = current_state
     return [current_state, prev_state]
 
@@ -74,29 +74,29 @@ def turn_wheel(steps, dir):
     correction_steps = '%.0f' % (correction_steps)
     print(correction_steps)
     if dir == LEFT:
-        print("L" + str(correction_steps))
+        # print("L" + str(correction_steps))
         ser.write(b"L" + str(correction_steps).encode())
     if dir == RIGHT:
-        print("R" + str(correction_steps))
+        # print("R" + str(correction_steps))
         ser.write(b"R" + str(correction_steps).encode())
 
-print("STARTING RUN")
+# print("STARTING RUN")
 state = state_control(0, LEFT, CENTER, CENTER)
 time.sleep(MOTOR_DELAY)
-print("Completed 1")
+# print("Completed 1")
 state = state_control(3, LEFT, state[0], state[1])
 time.sleep(MOTOR_DELAY)
-print("Completed 2")
+# print("Completed 2")
 state = state_control(3, LEFT, state[0], state[1])
 time.sleep(MOTOR_DELAY)
-print("Completed 3")
+# print("Completed 3")
 state = state_control(7, LEFT, state[0], state[1])
 time.sleep(MOTOR_DELAY)
-print("Completed 4")
+# print("Completed 4")
 state = state_control(0, LEFT, state[0], state[1])
 time.sleep(MOTOR_DELAY)
-print("Completed 5")
+# print("Completed 5")
 state = state_control(7, RIGHT, state[0], state[1])
 time.sleep(MOTOR_DELAY)
-print("Completed 6")
-print("ENDING RUN")
+# print("Completed 6")
+# print("ENDING RUN")
