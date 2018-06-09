@@ -13,15 +13,13 @@
 
 import time
 import cv2
+import csv
 import math
 import numpy as np
 import serial
 # from matplotlib import pyplot as plt
 
-ser = serial.Serial('/dev/ttyACM0', 9600)
-time.sleep(2)
-
-STEPPER_MOTOR_STEPS = 45
+STEPPER_MOTOR_STEPS = 20
 MOTOR_DELAY = 0.50
 
 LEFT = 0
@@ -33,8 +31,8 @@ CENTER =        2
 SOFT_RIGHT =    3
 HARD_RIGHT =    4
 
-def state_control(error, dir, current_state, prev_state):
-    if error < 2:
+def state_control(error, dir, current_state, prev_state, file):
+    if error < 3:
         current_state = CENTER
     elif error < 6:
         if dir == LEFT:
@@ -77,6 +75,7 @@ def state_control(error, dir, current_state, prev_state):
             if current_state == SOFT_RIGHT:
                 turn_wheel(1, LEFT)
     # print([current_state, prev_state])
+    file.write(str(current_state*10) + ',' + str(prev_state*10) + "\n")
     prev_state = current_state
     return [current_state, prev_state]
 
@@ -85,31 +84,45 @@ def turn_wheel(steps, dir):
     correction_steps = STEPPER_MOTOR_STEPS * steps
     correction_steps = float('%.2f'%(correction_steps))
     correction_steps = '%.0f' % (correction_steps)
-    print(correction_steps)
     if dir == LEFT:
-        # print("L" + str(correction_steps))
-        ser.write(b"L" + str(correction_steps).encode())
+        print("L" + str(correction_steps))
+        # ser.write(b"L" + str(correction_steps).encode())
     if dir == RIGHT:
-        # print("R" + str(correction_steps))
-        ser.write(b"R" + str(correction_steps).encode())
+        print("R" + str(correction_steps))
+        # ser.write(b"R" + str(correction_steps).encode())
 
-# print("STARTING RUN")
-state = state_control(0, LEFT, CENTER, CENTER)
-time.sleep(MOTOR_DELAY)
-# print("Completed 1")
-state = state_control(3, LEFT, state[0], state[1])
-time.sleep(MOTOR_DELAY)
-# print("Completed 2")
-state = state_control(3, LEFT, state[0], state[1])
-time.sleep(MOTOR_DELAY)
-# print("Completed 3")
-state = state_control(7, LEFT, state[0], state[1])
-time.sleep(MOTOR_DELAY)
-# print("Completed 4")
-state = state_control(0, LEFT, state[0], state[1])
-time.sleep(MOTOR_DELAY)
-# print("Completed 5")
-state = state_control(7, RIGHT, state[0], state[1])
-time.sleep(MOTOR_DELAY)
-# print("Completed 6")
-# print("ENDING RUN")
+
+CAR_WIDTH_CORRECTION = 3*12         # Half width of car in inches
+CORRECTION_FACTOR = 0.2522          # Constant to convert pixels to inches at 10 ft distance
+TARGET_DIST_PX = 140                # Target distance ahead of vehicle in pixels
+# going at 15 feet distance
+TARGET_DIST_SUB = 22.0
+BS_FACTOR = 1.6514
+
+filename = "faux_data.csv"
+file = open(filename, 'r')
+distances = file.readlines()
+file.close()
+
+filename = "output.csv"
+file = open(filename, 'w')
+
+state = state_control(0, LEFT, CENTER, CENTER, file)
+for distance in distances:
+    dist_from_line = float(distance[:len(distance) - 2])
+    if dist_from_line:
+        # print(dist_from_line)
+        if dist_from_line > 25:
+            print("GO RIGHT")
+            miss_dist = abs(dist_from_line - TARGET_DIST_SUB)
+            state = state_control(miss_dist, RIGHT, state[0], state[1], file)
+        elif dist_from_line < 19:
+            miss_dist = abs(dist_from_line - TARGET_DIST_SUB)
+            print("GO LEFT")
+            state = state_control(miss_dist, LEFT, state[0], state[1], file)
+        else:
+            miss_dist = abs(dist_from_line - TARGET_DIST_SUB)
+            print("YOU GOOD BOYE")
+            state = state_control(miss_dist, RIGHT, state[0], state[1], file)
+
+file.close()
